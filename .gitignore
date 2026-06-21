@@ -1,0 +1,25 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Local secrets — never commit (examples are committed instead)
+config/local.env
+extension/relay-core.local.js
+extension/manifest.json
+
+# Server runtime & secrets
+server/.env
+server/cookie_store.json
+server/scheduler_state.json
+server/settings.json
+server/runtime_config.json
+config/booking.local.json
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp

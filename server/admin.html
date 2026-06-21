@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>KU Leuven Autobooker — Settings</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; }
+    h1 { font-size: 1.25rem; }
+    h2 { font-size: 1rem; margin: 0 0 8px; }
+    label { display: block; margin-top: 14px; font-weight: 600; font-size: 0.9rem; }
+    input, select { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
+    button { margin-top: 20px; padding: 10px 20px; background: #1a73e8; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+    button.secondary { background: #fff; color: #1a73e8; border: 1px solid #1a73e8; margin-top: 8px; margin-left: 8px; }
+    .hint { color: #555; font-size: 0.85rem; margin-top: 4px; }
+    .status { margin-top: 16px; padding: 10px; border-radius: 6px; display: none; }
+    .ok { background: #e6f4ea; color: #067d3e; display: block; }
+    .err { background: #fce8e6; color: #b42318; display: block; }
+    fieldset { border: 1px solid #ddd; border-radius: 8px; padding: 12px 16px; margin-top: 16px; }
+    legend { font-weight: 600; padding: 0 4px; }
+    .banner { background: #f1f3f4; border-radius: 8px; padding: 12px 14px; margin-top: 16px; font-size: 0.9rem; }
+    .banner.active { background: #e8f0fe; border: 1px solid #c2d7f7; }
+    .banner strong { display: block; margin-bottom: 4px; }
+    .preview { background: #fafafa; border: 1px dashed #ccc; border-radius: 6px; padding: 10px 12px; margin-top: 10px; font-size: 0.85rem; line-height: 1.5; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 8px; }
+    th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid #eee; vertical-align: top; }
+    th { color: #555; font-weight: 600; }
+    .empty { color: #777; font-size: 0.85rem; margin-top: 6px; }
+    .meta { color: #666; font-size: 0.8rem; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+    .pill.ok { background: #e6f4ea; color: #067d3e; }
+    .pill.wait { background: #fef7e0; color: #b06000; }
+    .pill.off { background: #f1f3f4; color: #555; }
+  </style>
+</head>
+<body>
+  <h1>KU Leuven Autobooker</h1>
+  <p class="hint">Settings &amp; status — open <code>/admin</code> on your booking server (or via SSH tunnel).</p>
+
+  <fieldset>
+    <legend>Status</legend>
+    <div id="status_banner" class="banner">Loading…</div>
+    <p class="meta" id="session_meta"></p>
+
+    <h2>Booked by bot</h2>
+    <div id="bookings_table"></div>
+
+    <h2 style="margin-top:16px">Pending check-ins</h2>
+    <div id="checkins_table"></div>
+
+    <button type="button" class="secondary" id="refresh">Refresh</button>
+  </fieldset>
+
+  <label>Secret key</label>
+  <input id="secret" type="password" placeholder="Enter once — saved in this browser" />
+  <p class="hint">Only needed to <strong>save</strong> changes. Stored locally after first save.</p>
+
+  <fieldset>
+    <legend>Seat days (when you want a reservation)</legend>
+    <label><input id="booking_enabled" type="checkbox" checked /> Auto-book at 18:00</label>
+    <label>First seat day</label>
+    <input id="booking_period_start" type="date" />
+    <label>Last seat day</label>
+    <input id="booking_period_end" type="date" />
+    <div id="period_preview" class="preview"></div>
+    <p class="hint">Pick the calendar days you want a seat. The bot runs earlier (see preview) because KU opens slots N days ahead.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Seat &amp; slot</legend>
+    <label>Resource ID</label>
+    <input id="resource_id" type="number" />
+    <label>Resource name</label>
+    <input id="resource_name" type="text" />
+    <label>Building</label>
+    <input id="building_name" type="text" />
+    <label>Start time</label>
+    <input id="start_time" type="time" />
+    <label>End time</label>
+    <input id="end_time" type="time" />
+    <label>Days ahead (at 18:00)</label>
+    <input id="booking_date_offset_days" type="number" min="0" max="14" />
+    <p class="hint">KU Agora slots open 8 days ahead — each 18:00 run books <em>today + this number</em>.</p>
+  </fieldset>
+
+  <button type="button" id="save">Save settings</button>
+  <div id="status" class="status"></div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const SECRET_STORAGE = "autobooker_admin_secret";
+
+    function addDays(iso, days) {
+      if (!iso) return null;
+      const d = new Date(iso + "T12:00:00");
+      d.setDate(d.getDate() + days);
+      return d.toISOString().slice(0, 10);
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return "—";
+      const d = new Date(iso + "T12:00:00");
+      return d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+    }
+
+    function computeRunWindow(seatStart, seatEnd, offsetDays) {
+      if (!seatStart || !seatEnd || offsetDays == null || Number.isNaN(offsetDays)) {
+        return { runStart: null, runEnd: null };
+      }
+      return {
+        runStart: addDays(seatStart, -offsetDays),
+        runEnd: addDays(seatEnd, -offsetDays),
+      };
+    }
+
+    function updatePeriodPreview() {
+      const seatStart = $("booking_period_start").value;
+      const seatEnd = $("booking_period_end").value;
+      const offset = parseInt($("booking_date_offset_days").value, 10);
+      const { runStart, runEnd } = computeRunWindow(seatStart, seatEnd, offset);
+
+      if (!seatStart || !seatEnd) {
+        $("period_preview").textContent = "Set first and last seat day to see the schedule.";
+        return;
+      }
+
+      $("period_preview").innerHTML =
+        `<strong>Seat days:</strong> ${fmtDate(seatStart)} → ${fmtDate(seatEnd)}<br>` +
+        `<strong>Bot runs at 18:00:</strong> ${fmtDate(runStart)} → ${fmtDate(runEnd)}<br>` +
+        `<strong>Example:</strong> on ${fmtDate(runStart)} at 18:00 → books ${fmtDate(seatStart)}`;
+    }
+
+    function renderTable(rows, columns, emptyText) {
+      if (!rows.length) return `<p class="empty">${emptyText}</p>`;
+      const head = columns.map((c) => `<th>${c.label}</th>`).join("");
+      const body = rows.map((row) =>
+        `<tr>${columns.map((c) => `<td>${c.render(row)}</td>`).join("")}</tr>`
+      ).join("");
+      return `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+    }
+
+    function renderDashboard(health) {
+      const active = health.booking_active_today && health.next_target_date;
+      const pill = active
+        ? `<span class="pill ok">Active tonight</span>`
+        : health.booking_enabled
+          ? `<span class="pill wait">Waiting / paused</span>`
+          : `<span class="pill off">Disabled</span>`;
+
+      $("status_banner").className = "banner" + (active ? " active" : "");
+      $("status_banner").innerHTML =
+        `${pill}<strong>${health.booking_status_message || "—"}</strong>` +
+        (health.run_period_start && health.run_period_end
+          ? `Run window: ${fmtDate(health.run_period_start)} → ${fmtDate(health.run_period_end)}`
+          : "");
+
+      const cookieOk = health.has_cookie;
+      const captured = health.captured_at
+        ? new Date(health.captured_at).toLocaleString()
+        : "never";
+      $("session_meta").textContent =
+        `Session: ${cookieOk ? "ready" : "missing — log in on kurt3 and send cookies"} · ` +
+        `Last relay: ${captured} · Quota: ${health.future_quota_hours_used}/${health.future_quota_hours_limit}h`;
+
+      const today = new Date().toISOString().slice(0, 10);
+      const upcoming = (health.bookings_by_bot || [])
+        .filter((b) => b.date >= today)
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+      $("bookings_table").innerHTML = renderTable(
+        upcoming,
+        [
+          { label: "Seat day", render: (b) => fmtDate(b.date) },
+          { label: "Hours", render: (b) => String(b.hours) },
+          { label: "Reservation", render: (b) => b.reservation_id || "—" },
+          { label: "Booked", render: (b) => b.booked_on ? b.booked_on.slice(0, 16).replace("T", " ") : "—" },
+        ],
+        "No upcoming bot bookings yet."
+      );
+
+      $("checkins_table").innerHTML = renderTable(
+        health.pending_checkins || [],
+        [
+          { label: "Reservation", render: (c) => String(c.reservation_id) },
+          { label: "Check-in at", render: (c) => c.checkin_at ? c.checkin_at.slice(0, 16).replace("T", " ") : "—" },
+          { label: "Link", render: (c) => c.url ? `<a href="${c.url}" target="_blank" rel="noopener">Open</a>` : "—" },
+        ],
+        "No check-ins scheduled."
+      );
+    }
+
+    async function loadDashboard() {
+      const res = await fetch("/health");
+      if (!res.ok) throw new Error("Could not load /health");
+      renderDashboard(await res.json());
+    }
+
+    async function loadConfig() {
+      const saved = localStorage.getItem(SECRET_STORAGE);
+      if (saved) $("secret").value = saved;
+
+      const res = await fetch("/config");
+      const c = await res.json();
+      $("booking_enabled").checked = c.booking_enabled;
+      $("booking_period_start").value = c.booking_period_start || "";
+      $("booking_period_end").value = c.booking_period_end || "";
+      $("resource_id").value = c.resource_id;
+      $("resource_name").value = c.resource_name || "";
+      $("building_name").value = c.building_name || "";
+      $("start_time").value = c.start_time || "10:00";
+      $("end_time").value = c.end_time || "18:00";
+      $("booking_date_offset_days").value = c.booking_date_offset_days ?? 8;
+      updatePeriodPreview();
+    }
+
+    ["booking_period_start", "booking_period_end", "booking_date_offset_days"].forEach((id) => {
+      $(id).addEventListener("input", updatePeriodPreview);
+      $(id).addEventListener("change", updatePeriodPreview);
+    });
+
+    $("refresh").addEventListener("click", () => {
+      loadDashboard().catch((e) => {
+        $("status").textContent = e.message;
+        $("status").className = "status err";
+      });
+    });
+
+    $("save").addEventListener("click", async () => {
+      const status = $("status");
+      status.className = "status";
+      const payload = {
+        secret: $("secret").value,
+        booking_enabled: $("booking_enabled").checked,
+        booking_period_start: $("booking_period_start").value,
+        booking_period_end: $("booking_period_end").value,
+        resource_id: parseInt($("resource_id").value, 10),
+        resource_name: $("resource_name").value,
+        building_name: $("building_name").value,
+        start_time: $("start_time").value,
+        end_time: $("end_time").value,
+        booking_date_offset_days: parseInt($("booking_date_offset_days").value, 10),
+      };
+      try {
+        const res = await fetch("/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Save failed");
+        if ($("secret").value) {
+          localStorage.setItem(SECRET_STORAGE, $("secret").value);
+        }
+        status.textContent = data.booking_status_message || "Saved.";
+        status.className = "status ok";
+        await loadDashboard();
+      } catch (e) {
+        status.textContent = e.message;
+        status.className = "status err";
+      }
+    });
+
+    Promise.all([loadConfig(), loadDashboard()]).catch((e) => {
+      $("status").textContent = "Could not load: " + e.message;
+      $("status").className = "status err";
+    });
+  </script>
+</body>
+</html>

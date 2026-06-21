@@ -1,0 +1,13 @@
+// Copy to relay-core.local.js (gitignored) — your real secret and server URL live here.
+// Must match SECRET_KEY in server/.env on the droplet.
+
+const AUTOBOOKER_LOCAL = {
+  SECRET_KEY: "change-me-same-as-server-env",
+  WEBHOOK_URLS: [
+    "http://127.0.0.1:8080/update-cookie",
+    "http://localhost:8080/update-cookie",
+    "http://YOUR_SERVER_IP:8080/update-cookie",
+  ],
+  SERVER_IP: "YOUR_SERVER_IP",
+  SSH_KEY: "~/.ssh/id_ed25519_do",
+};

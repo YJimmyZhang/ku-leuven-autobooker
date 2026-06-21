@@ -1,0 +1,6 @@
+{
+  "booking_enabled": true,
+  "booking_period_start": "2026-06-30",
+  "booking_period_end": "2026-07-19",
+  "booking_date_offset_days": 8
+}

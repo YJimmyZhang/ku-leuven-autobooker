@@ -1,0 +1,21 @@
+services:
+  autobooker:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      TZ: Europe/Brussels
+      PORT: "8080"
+      SECRET_KEY: ${SECRET_KEY}
+      COOKIE_STORE_PATH: /data/cookie_store.json
+      STATE_STORE_PATH: /data/scheduler_state.json
+      RUNTIME_CONFIG_PATH: /data/runtime_config.json
+      BOOKING_ENABLED: ${BOOKING_ENABLED:-true}
+      BOOKING_PERIOD_START: ${BOOKING_PERIOD_START:-}
+      BOOKING_PERIOD_END: ${BOOKING_PERIOD_END:-}
+    volumes:
+      - autobooker-data:/data
+
+volumes:
+  autobooker-data:

@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "KU Leuven Autobooker – Cookie Relay",
+  "version": "1.6.0",
+  "description": "Captures KU Leuven SSO cookies and relays them to your booking server.",
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "ku-leuven-autobooker@local",
+      "strict_min_version": "109.0"
+    }
+  },
+
+  "permissions": [
+    "cookies",
+    "alarms",
+    "tabs",
+    "notifications"
+  ],
+
+  "host_permissions": [
+    "*://*.kuleuven.be/*",
+    "*://kuleuven.be/*",
+    "*://*.ghum.kuleuven.be/*",
+    "http://127.0.0.1/*",
+    "http://localhost/*",
+    "http://YOUR_SERVER_IP/*"
+  ],
+
+  "content_scripts": [
+    {
+      "matches": ["https://kurt3.ghum.kuleuven.be/*"],
+      "js": ["content-kurt3.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "action": {
+    "default_title": "Click to send kurt3 cookies to server"
+  },
+
+  "background": {
+    "scripts": ["relay-core.local.js", "relay-core.js", "background.js"]
+  }
+}
