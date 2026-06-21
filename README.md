@@ -9,7 +9,7 @@ The tricky part is authentication: KU Leuven uses Shibboleth SSO, which normally
 
 ```mermaid
 flowchart LR
-  subgraph browser [Your Mac — Firefox]
+  subgraph browser [Your laptop — Firefox]
     EXT[Extension]
     KURT3[kurt3.ghum.kuleuven.be]
     KURT3 -->|SSO login| EXT
