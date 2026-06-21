@@ -12,8 +12,14 @@ load_local_env
 DROPLET_IP="${DROPLET_IP:-${SERVER_IP:-YOUR_SERVER_IP}}"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_ed25519_do}"
 LOCAL_PORT="${LOCAL_PORT:-8080}"
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-LOCAL_CONFIG="${LOCAL_CONFIG:-$SCRIPT_DIR/../config/booking.local.json}"
+LOCAL_CONFIG="${LOCAL_CONFIG:-}"
+if [[ -z "$LOCAL_CONFIG" ]]; then
+  if [[ -n "${AUTBOOKER_AGENT_DIR:-}" && -f "${AUTBOOKER_AGENT_DIR}/booking.local.json" ]]; then
+    LOCAL_CONFIG="${AUTBOOKER_AGENT_DIR}/booking.local.json"
+  else
+    LOCAL_CONFIG="$SCRIPT_DIR/../config/booking.local.json"
+  fi
+fi
 TUNNEL_PATTERN="127.0.0.1:${LOCAL_PORT}:127.0.0.1:8080"
 
 tunnel_running() {

@@ -43,7 +43,8 @@ flowchart LR
 | `scripts/tunnel.sh` | SSH port-forward so the extension can reach the server **on KU campus WiFi** (ICTS blocks direct IPs). |
 | `scripts/sync-config.sh` | Pulls current server settings into `config/booking.local.json`. |
 | `scripts/tunnel-if-needed.sh` | Wrapper that starts the tunnel only when needed. |
-| `scripts/install-tunnel-agent.sh` | Installs a launchd agent to keep the tunnel running on macOS. |
+| `scripts/install-tunnel-agent.sh` | Installs a macOS LaunchAgent for the tunnel (copies scripts to Application Support — required when the repo lives in `~/Documents`) |
+| `scripts/setup-local.sh` | Copies example config files to gitignored local paths on first setup |
 
 ---
 
@@ -104,22 +105,50 @@ For production, deploy with Docker (see `server/docker-compose.yml`) or use the 
 
 ### Firefox extension
 
-1. Open `about:debugging` → **This Firefox** → **Load Temporary Add-on**
+```bash
+./scripts/setup-local.sh
+```
+
+Then edit:
+
+- `extension/relay-core.local.js` — `SECRET_KEY` (match server `.env`) and `WEBHOOK_URLS`
+- `extension/manifest.json` — replace `YOUR_SERVER_IP` in `host_permissions`
+
+Load the add-on:
+
+1. Firefox → `about:debugging` → **This Firefox** → **Load Temporary Add-on**
 2. Select `extension/manifest.json`
-3. Edit `extension/relay-core.js`:
-   - Set `SECRET_KEY` to match your server's `.env`
-   - Set `WEBHOOK_URLS` to your server address(es)
+3. If Firefox asks for permissions → **Allow** (or enable in `about:addons` → your extension → **Permissions**)
 
-### KU campus WiFi
+Reload the add-on after any config change.
 
-Campus network blocks some external hosts. If the extension can't reach your VPS directly, run the SSH tunnel on your Mac:
+### KU campus WiFi + auto tunnel (recommended)
+
+Campus WiFi blocks browser requests to external server IPs. The extension sends cookies via `localhost` through an SSH tunnel.
+
+**Automatic (recommended):**
+
+```bash
+./scripts/install-tunnel-agent.sh
+```
+
+Runs at login + every 30 min during your active booking window. Re-run after editing `config/local.env`.
+
+**Manual (when needed before the booking window starts):**
 
 ```bash
 ./scripts/tunnel.sh
-# forwards localhost:8080 → your droplet:8080
 ```
 
-Keep the tunnel open while sending cookies. The 18:00 booking itself runs on the server — no tunnel needed for that.
+Keep the terminal open while sending cookies. The **18:00 booking runs on the server** — your Mac and tunnel are not needed for that.
+
+### Docker on the server
+
+After changing `server/.env`, recreate the container (a plain `restart` does **not** reload env vars):
+
+```bash
+docker compose up -d --force-recreate
+```
 
 ---
 
@@ -206,9 +235,9 @@ They clone it, run `./scripts/setup-local.sh`, and fill in their own local files
 - `server/.env`
 - `server/cookie_store.json`
 
-### Public repo?
+### Public repo
 
-Only if you scrub all personal data and secrets first. A private repo is safer for a tool that handles login sessions.
+Safe to make public once local secret files stay gitignored and `git status` shows no `local.env`, `relay-core.local.js`, or `manifest.json`. Rotate `SECRET_KEY` if an old key was ever committed.
 
 ---
 
