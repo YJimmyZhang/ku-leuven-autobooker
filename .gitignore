@@ -7,6 +7,7 @@ __pycache__/
 
 # Local secrets — never commit (examples are committed instead)
 config/local.env
+CHEATSHEET.local.md
 extension/relay-core.local.js
 extension/manifest.json
 

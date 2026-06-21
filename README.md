@@ -48,6 +48,7 @@ flowchart LR
 | `scripts/install-tunnel-agent.sh` | **macOS** — auto tunnel via LaunchAgent (login + every 30 min) |
 | `scripts/install-tunnel-task.ps1` | **Windows** — auto tunnel via Task Scheduler (login + every 30 min) |
 | `scripts/setup-local.sh` | Copies example config files to gitignored local paths on first setup |
+| `CHEATSHEET.md` | Tunnel, extension, and server diagnostic commands (placeholders) |
 
 ---
 

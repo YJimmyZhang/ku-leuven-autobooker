@@ -69,7 +69,7 @@ function Start-Tunnel {
         "-o", "ExitOnForwardFailure=yes",
         "-o", "ServerAliveInterval=60",
         "-o", "ServerAliveCountMax=3",
-        "-L", "${localPort}:127.0.0.1:8080",
+        "-L", "127.0.0.1:${localPort}:127.0.0.1:8080",
         "root@${serverIp}"
     ) -WindowStyle Hidden
 }

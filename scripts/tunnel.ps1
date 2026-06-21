@@ -12,4 +12,4 @@ $serverIp = if ($env:DROPLET_IP) { $env:DROPLET_IP } elseif ($env:SERVER_IP) { $
 $sshKey = if ($env:SSH_KEY) { $env:SSH_KEY.Replace('$HOME', $env:USERPROFILE).Replace('~', $env:USERPROFILE) } else { Join-Path $env:USERPROFILE ".ssh\id_ed25519_do" }
 
 Write-Host "Forwarding localhost:8080 → ${serverIp}:8080 (Ctrl+C to stop)"
-& ssh -i $sshKey -N -L 8080:127.0.0.1:8080 "root@${serverIp}"
+& ssh -i $sshKey -N -L 127.0.0.1:8080:127.0.0.1:8080 "root@${serverIp}"

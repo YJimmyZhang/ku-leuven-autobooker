@@ -77,7 +77,7 @@ start_tunnel() {
     -o ExitOnForwardFailure=yes \
     -o ServerAliveInterval=60 \
     -o ServerAliveCountMax=3 \
-    -L "${LOCAL_PORT}:127.0.0.1:8080" \
+    -L "127.0.0.1:${LOCAL_PORT}:127.0.0.1:8080" \
     "root@${DROPLET_IP}"
 }
 

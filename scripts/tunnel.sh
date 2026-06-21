@@ -10,4 +10,4 @@ load_local_env
 DROPLET_IP="${DROPLET_IP:-${SERVER_IP:-YOUR_SERVER_IP}}"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_ed25519_do}"
 
-exec ssh -i "$SSH_KEY" -N -L 8080:127.0.0.1:8080 "root@${DROPLET_IP}"
+exec ssh -i "$SSH_KEY" -N -L 127.0.0.1:8080:127.0.0.1:8080 "root@${DROPLET_IP}"
