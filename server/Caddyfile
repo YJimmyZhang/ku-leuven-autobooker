@@ -1,0 +1,11 @@
+# Caddy config for the KU Leuven autobooker.
+# $DOMAIN comes from docker-compose (set it in server/.env, e.g. DOMAIN=yourname.duckdns.org).
+#
+# Caddy automatically obtains and renews a free Let's Encrypt TLS certificate for
+# $DOMAIN on first start, then reverse-proxies all requests to the autobooker
+# container on its internal port 8080. HTTP on :80 is redirected to HTTPS.
+
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy autobooker:8080
+}

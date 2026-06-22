@@ -126,11 +126,19 @@ Load the add-on:
 
 Reload the add-on after any config change.
 
-### KU campus WiFi + SSH tunnel
+### Reaching the server: HTTPS (recommended) or SSH tunnel (fallback)
 
-Campus WiFi blocks browser requests to external server IPs. The Firefox extension sends cookies via `localhost` through an SSH tunnel.
+The extension runs in a secure (`moz-extension://`) context, and Firefox blocks a secure context from making plain `http://` requests to a public IP (mixed content). Loopback is exempt, so there are two ways to get cookies to the server:
 
-The **18:00 booking runs on the server** — your laptop and tunnel are not needed for that. The tunnel is only for **sending cookies** from Firefox while on campus.
+**HTTPS (recommended) — no tunnel, works on any network.** Put the server behind a real TLS cert and the extension posts straight to `https://…/update-cookie`. This needs a hostname: use the included Caddy setup + a free DuckDNS subdomain (Caddy auto-provisions a Let's Encrypt cert). Full walkthrough: **[docs/HTTPS-SETUP.md](docs/HTTPS-SETUP.md)**.
+
+> **Cost:** you need an always-on server regardless (the 18:00 booking runs server-side), e.g. a VPS for a few $/month or a home server/Raspberry Pi you already leave on. Caddy + DuckDNS add no cost. The included `server/fly.toml` / `server/railway.toml` give managed HTTPS, but **Fly.io and Railway no longer have a usable free tier** for an always-on service.
+
+**SSH tunnel (fallback).** Forwards the droplet's port to `localhost`, which Firefox allows over http. Use this if you don't want to set up a domain. Details below.
+
+The **18:00 booking runs on the server** — your laptop, tunnel, and HTTPS endpoint are not needed for that. They only matter for **sending cookies** from Firefox.
+
+> Architecture note: the app binds to `127.0.0.1:8080` on the droplet (not exposed publicly). Public traffic arrives via Caddy on 443 (HTTPS); the tunnel reaches the same loopback port over SSH. Port 8080 is no longer open on the droplet's firewall.
 
 #### macOS — automatic (recommended)
 

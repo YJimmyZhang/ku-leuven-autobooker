@@ -17,9 +17,13 @@ echo \
 apt-get update
 apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
-echo "==> Opening port 8080 in UFW..."
+echo "==> Opening ports 80 + 443 in UFW (for Caddy / HTTPS)..."
 ufw allow OpenSSH
-ufw allow 8080/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
+# Port 8080 is intentionally NOT opened: the app binds to 127.0.0.1 only and is
+# reached either via Caddy (HTTPS) or the SSH tunnel. Close it if it was opened before.
+ufw delete allow 8080/tcp 2>/dev/null || true
 ufw --force enable
 
 echo "==> Cloning app (or skip if you upload files manually)..."
@@ -37,18 +41,28 @@ cd "$APP_DIR/server"
 if [ ! -f .env ]; then
   cp .env.example .env
   echo ""
-  echo "IMPORTANT: Edit $APP_DIR/server/.env and set SECRET_KEY"
+  echo "IMPORTANT: Edit $APP_DIR/server/.env and set SECRET_KEY and DOMAIN"
   echo "  nano $APP_DIR/server/.env"
   exit 1
 fi
 
-echo "==> Starting autobooker..."
+# DOMAIN must be set for Caddy to obtain a TLS certificate.
+set -a; . ./.env; set +a
+if [ -z "${DOMAIN:-}" ] || [ "${DOMAIN}" = "yourname.duckdns.org" ]; then
+  echo "ERROR: Set DOMAIN in $APP_DIR/server/.env to your real hostname first."
+  echo "  Create a free one at https://www.duckdns.org and point it at this droplet's IP."
+  exit 1
+fi
+
+echo "==> Starting autobooker + Caddy (auto-HTTPS for ${DOMAIN})..."
 docker compose up -d --build
 
 echo ""
-echo "Done. Server should be live at:"
-echo "  http://$(curl -s ifconfig.me):8080/health"
+echo "Done. Once DNS for ${DOMAIN} points here, the server is live at:"
+echo "  https://${DOMAIN}/health"
 echo ""
-echo "Update extension/background.js:"
-echo "  WEBHOOK_URL = \"http://YOUR_DROPLET_IP:8080/update-cookie\""
-echo "  SECRET_KEY  = (same value as in .env)"
+echo "Caddy fetches the TLS cert on first request — give it ~30s, then test the URL above."
+echo ""
+echo "Point the Firefox extension at it (extension/relay-core.local.js):"
+echo "  WEBHOOK_URLS first entry = \"https://${DOMAIN}/update-cookie\""
+echo "  SECRET_KEY               = (same value as in .env)"

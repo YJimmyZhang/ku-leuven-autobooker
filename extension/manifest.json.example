@@ -24,7 +24,8 @@
     "*://*.ghum.kuleuven.be/*",
     "http://127.0.0.1/*",
     "http://localhost/*",
-    "http://YOUR_SERVER_IP/*"
+    "http://YOUR_SERVER_IP/*",
+    "https://YOUR_DOMAIN/*"
   ],
 
   "content_scripts": [

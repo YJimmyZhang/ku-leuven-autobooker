@@ -1,10 +1,26 @@
 // Background: auto-relay + message handler for kurt3 page button
 
-const RELAY_ORIGINS = [
-  "http://127.0.0.1/*",
-  "http://localhost/*",
-  `http://${AUTOBOOKER.SERVER_IP}/*`,
-];
+// Origins we may need permission for: localhost, the legacy IP, and every
+// configured webhook origin (e.g. the https:// endpoint) so the HTTPS path
+// isn't silently blocked by a missing host permission.
+const RELAY_ORIGINS = Array.from(
+  new Set(
+    [
+      "http://127.0.0.1/*",
+      "http://localhost/*",
+      `http://${AUTOBOOKER.SERVER_IP}/*`,
+      ...(AUTOBOOKER.WEBHOOK_URLS || []).map((u) => {
+        try {
+          // Firefox match patterns can't include a port — use scheme + host only.
+          const { protocol, hostname } = new URL(u);
+          return `${protocol}//${hostname}/*`;
+        } catch {
+          return null;
+        }
+      }),
+    ].filter(Boolean)
+  )
+);
 
 async function ensureHostPermissions() {
   if (!browser.permissions?.contains) return true;

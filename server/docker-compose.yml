@@ -2,8 +2,11 @@ services:
   autobooker:
     build: .
     restart: unless-stopped
+    # Bound to loopback only: reachable by Caddy (same Docker network) and by
+    # the SSH tunnel (which forwards to the droplet's 127.0.0.1:8080).
+    # NOT exposed publicly on the droplet's IP — public traffic comes in via Caddy/HTTPS.
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     environment:
       TZ: Europe/Brussels
       PORT: "8080"
@@ -17,5 +20,25 @@ services:
     volumes:
       - autobooker-data:/data
 
+  # Caddy terminates TLS (auto Let's Encrypt cert for $DOMAIN) and reverse-proxies
+  # HTTPS traffic to the autobooker container. This is what lets the Firefox
+  # extension POST cookies over https:// from any network — no SSH tunnel needed.
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - autobooker
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
 volumes:
   autobooker-data:
+  caddy-data:
+  caddy-config:

@@ -3,10 +3,12 @@
 
 const AUTOBOOKER_LOCAL = {
   SECRET_KEY: "change-me-same-as-server-env",
+  // Tried in order. Put the HTTPS endpoint first — it works on any network with
+  // no SSH tunnel. The localhost entries stay as a tunnel fallback.
   WEBHOOK_URLS: [
+    "https://YOUR_DOMAIN/update-cookie",
     "http://127.0.0.1:8080/update-cookie",
     "http://localhost:8080/update-cookie",
-    "http://YOUR_SERVER_IP:8080/update-cookie",
   ],
   SERVER_IP: "YOUR_SERVER_IP",
   SSH_KEY: "~/.ssh/id_ed25519_do",
