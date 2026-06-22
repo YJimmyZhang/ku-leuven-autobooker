@@ -257,40 +257,21 @@ Extension secrets live in `extension/relay-core.local.js` (not in `relay-core.js
 
 ## Sharing this project with friends
 
-**Yes — put it on GitHub.** That is the easiest way to share code, track changes, and let friends clone it.
+The repo is on GitHub. To share it, either invite collaborators (**Settings → Collaborators**) if it's private, or make it public — both are safe as long as the secret check below passes.
 
-### Recommended: private repository
+Whoever clones it runs `./scripts/setup-local.sh`, then fills in their own `config/local.env`, `extension/relay-core.local.js`, `extension/manifest.json`, and their server's `server/.env`.
 
-1. Create a repo on [github.com/new](https://github.com/new) — choose **Private**
-2. From this folder:
+### Secret check before making it public
 
-```bash
-cd ku-leuven-autobooker
-git init
-git add .
-git commit -m "Initial commit: KU Leuven study seat autobooker"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/ku-leuven-autobooker.git
-git push -u origin main
-```
-
-3. On GitHub: **Settings → Collaborators** → invite your friends
-
-They clone it, run `./scripts/setup-local.sh`, and fill in their own local files and droplet `server/.env`.
-
-### Before you push
-
-`.gitignore` blocks local secret files. If you run `git status`, you should **not** see:
+`.gitignore` keeps local secrets out of the repo. Confirm `git status` never lists any of these (it shouldn't — they're ignored):
 
 - `config/local.env`
 - `extension/relay-core.local.js`
-- `extension/manifest.json` (your copy with real server IP)
+- `extension/manifest.json` (your copy with the real domain/IP)
 - `server/.env`
 - `server/cookie_store.json`
 
-### Public repo
-
-Safe to make public once local secret files stay gitignored and `git status` shows no `local.env`, `relay-core.local.js`, or `manifest.json`. Rotate `SECRET_KEY` if an old key was ever committed.
+Rotate `SECRET_KEY` if one was ever committed in the past. Your current history is clean.
 
 ---
 
