@@ -271,7 +271,6 @@ Whoever clones it runs `./scripts/setup-local.sh`, then fills in their own `conf
 - `server/.env`
 - `server/cookie_store.json`
 
-Rotate `SECRET_KEY` if one was ever committed in the past. Your current history is clean.
 
 ---
 
